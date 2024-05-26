@@ -21,10 +21,10 @@ use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use common::{message::Message, RuntimeHandler, RuntimeInstance};
 use hypervisor::Hypervisor;
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(feature = "dragonball", not(target_arch = "s390x")))]
 use hypervisor::{dragonball::Dragonball, HYPERVISOR_DRAGONBALL};
 use hypervisor::{qemu::Qemu, HYPERVISOR_QEMU};
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(feature = "dragonball", not(target_arch = "s390x")))]
 use kata_types::config::DragonballConfig;
 use kata_types::config::{hypervisor::register_hypervisor_plugin, QemuConfig, TomlConfig};
 
@@ -51,7 +51,7 @@ impl RuntimeHandler for VirtContainer {
         logging::register_subsystem_logger("runtimes", "virt-container");
 
         // register
-        #[cfg(not(target_arch = "s390x"))]
+        #[cfg(all(feature = "dragonball", not(target_arch = "s390x")))]
         {
             let dragonball_config = Arc::new(DragonballConfig::new());
             register_hypervisor_plugin("dragonball", dragonball_config);
@@ -140,7 +140,7 @@ async fn new_hypervisor(toml_config: &TomlConfig) -> Result<Arc<dyn Hypervisor>>
     // TODO: support other hypervisor
     // issue: https://github.com/kata-containers/kata-containers/issues/4634
     match hypervisor_name.as_str() {
-        #[cfg(not(target_arch = "s390x"))]
+        #[cfg(all(feature = "dragonball", not(target_arch = "s390x")))]
         HYPERVISOR_DRAGONBALL => {
             let mut hypervisor = Dragonball::new();
             hypervisor

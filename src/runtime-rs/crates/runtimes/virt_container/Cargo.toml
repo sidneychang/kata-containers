@@ -42,3 +42,4 @@ default = ["cloud-hypervisor"]
 
 # Enable the Cloud Hypervisor driver
 cloud-hypervisor = []
+dragonball = []

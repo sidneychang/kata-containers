@@ -90,7 +90,7 @@ HYPERVISOR_CLH = cloud-hypervisor
 
 
 DEFAULT_HYPERVISOR ?= $(HYPERVISOR_DB)
-
+# DEFAULT_HYPERVISOR ?= $(HYPERVISOR_QEMU)
 ##VAR HYPERVISOR=<hypervisor_name> List of hypervisors this build system can generate configuration for.
 HYPERVISORS := $(HYPERVISOR_DB) $(HYPERVISOR_ACRN) $(HYPERVISOR_FC) $(HYPERVISOR_QEMU) $(HYPERVISOR_CLH)
 
@@ -422,11 +422,18 @@ COMMIT_NO := $(shell git rev-parse HEAD 2>/dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no 2>/dev/null || true),${COMMIT_NO}-dirty,${COMMIT_NO})
 COMMIT_MSG = $(if $(COMMIT),$(COMMIT),unknown)
 
-EXTRA_RUSTFEATURES :=
+EXTRA_RUSTFEATURES := 
+
+# 检查 DEFAULT_HYPERVISOR 是否设置为 HYPERVISOR_DB
+ifeq ($(DEFAULT_HYPERVISOR),$(HYPERVISOR_DB))
+    # 如果是，添加 dragonball feature
+    EXTRA_RUSTFEATURES :=  dragonball
+endif
 
 ifneq ($(EXTRA_RUSTFEATURES),)
     override EXTRA_RUSTFEATURES := --features $(EXTRA_RUSTFEATURES)
 endif
+
 
 
 TARGET_PATH = target/$(TRIPLE)/$(BUILD_TYPE)/$(TARGET)
@@ -497,6 +504,7 @@ GENERATED_FILES += $(CONFIGS)
 runtime: $(TARGET)
 
 static-checks-build: $(GENERATED_FILES)
+$(info EXTRA_RUSTFEATURES: $(EXTRA_RUSTFEATURES))
 
 $(TARGET): $(GENERATED_FILES) $(TARGET_PATH)
 
