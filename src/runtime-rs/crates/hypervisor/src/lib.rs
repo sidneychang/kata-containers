@@ -10,6 +10,7 @@ extern crate slog;
 logging::logger_with_subsystem!(sl, "hypervisor");
 
 pub mod device;
+pub mod net;
 pub mod hypervisor_persist;
 pub use device::driver::*;
 use device::DeviceType;

@@ -88,6 +88,8 @@ HYPERVISOR_FC = firecracker
 HYPERVISOR_QEMU = qemu
 HYPERVISOR_CLH = cloud-hypervisor
 
+##VAR BUILD_DRAGONBALL=<bool> is a option that can decide whether to build dragonball in runtime-rs
+BUILD_DRAGONBALL = true
 
 DEFAULT_HYPERVISOR ?= $(HYPERVISOR_DB)
 # DEFAULT_HYPERVISOR ?= $(HYPERVISOR_QEMU)
@@ -424,10 +426,10 @@ COMMIT_MSG = $(if $(COMMIT),$(COMMIT),unknown)
 
 EXTRA_RUSTFEATURES := 
 
-# 检查 DEFAULT_HYPERVISOR 是否设置为 HYPERVISOR_DB
-ifeq ($(DEFAULT_HYPERVISOR),$(HYPERVISOR_DB))
-    # 如果是，添加 dragonball feature
-    EXTRA_RUSTFEATURES :=  dragonball
+# check value of BUILD_DRAGONBALL 
+ifeq ($(BUILD_DRAGONBALL),true)
+    # buildin dragonball in runtime if BUILD_DRAGONBALL is true
+    EXTRA_RUSTFEATURES +=  dragonball
 endif
 
 ifneq ($(EXTRA_RUSTFEATURES),)

@@ -1631,7 +1631,6 @@ dependencies = [
  "async-trait",
  "ch-config",
  "crossbeam-channel",
- "dbs-utils",
  "dragonball",
  "futures 0.3.28",
  "go-flag",
