@@ -13,7 +13,7 @@ pub mod device;
 pub mod hypervisor_persist;
 pub use device::driver::*;
 use device::DeviceType;
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
 pub mod dragonball;
 mod kernel_param;
 pub mod qemu;
@@ -51,12 +51,12 @@ const VM_ROOTFS_FILESYSTEM_EROFS: &str = "erofs";
 // /dev/hugepages will be the mount point
 // mkdir -p /dev/hugepages
 // mount -t hugetlbfs none /dev/hugepages
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
 const DEV_HUGEPAGES: &str = "/dev/hugepages";
 pub const HUGETLBFS: &str = "hugetlbfs";
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
 const SHMEM: &str = "shmem";
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
 const HUGE_SHMEM: &str = "hugeshmem";
 
 pub const HYPERVISOR_DRAGONBALL: &str = "dragonball";

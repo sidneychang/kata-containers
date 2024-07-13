@@ -87,12 +87,17 @@ HYPERVISOR_ACRN = acrn
 HYPERVISOR_FC = firecracker
 HYPERVISOR_QEMU = qemu
 HYPERVISOR_CLH = cloud-hypervisor
-
+DRAGONBALL = yes
 
 DEFAULT_HYPERVISOR ?= $(HYPERVISOR_DB)
 
 ##VAR HYPERVISOR=<hypervisor_name> List of hypervisors this build system can generate configuration for.
 HYPERVISORS := $(HYPERVISOR_DB) $(HYPERVISOR_ACRN) $(HYPERVISOR_FC) $(HYPERVISOR_QEMU) $(HYPERVISOR_CLH)
+ifneq ($(DRAGONBALL),yes)
+    DEFAULT_HYPERVISOR = $(HYPERVISOR_QEMU)
+	HYPERVISORS := $(HYPERVISOR_ACRN) $(HYPERVISOR_FC) $(HYPERVISOR_QEMU) $(HYPERVISOR_CLH)
+endif
+
 
 CLHPATH := $(CLHBINDIR)/$(CLHCMD)
 CLHVALIDHYPERVISORPATHS := [\"$(CLHPATH)\"]
@@ -422,12 +427,16 @@ COMMIT_NO := $(shell git rev-parse HEAD 2>/dev/null || true)
 COMMIT := $(if $(shell git status --porcelain --untracked-files=no 2>/dev/null || true),${COMMIT_NO}-dirty,${COMMIT_NO})
 COMMIT_MSG = $(if $(COMMIT),$(COMMIT),unknown)
 
-EXTRA_RUSTFEATURES :=
+EXTRA_RUSTFEATURES := 
+
+# if enable dragonball hypervisor, add the feature to build dragonball in runtime
+ifeq ($(DRAGONBALL),yes)
+    EXTRA_RUSTFEATURES +=  dragonball
+endif
 
 ifneq ($(EXTRA_RUSTFEATURES),)
     override EXTRA_RUSTFEATURES := --features $(EXTRA_RUSTFEATURES)
 endif
-
 
 TARGET_PATH = target/$(TRIPLE)/$(BUILD_TYPE)/$(TARGET)
 
@@ -581,6 +590,7 @@ show-summary: show-header
 	  "$(foreach c,$(sort $(SYSCONFIG_PATHS)),$(shell printf "\\t - $(c)\\\n"))"
 	@printf "\tdefault install path for $(DEFAULT_HYPERVISOR) (CONFIG_PATH) : %s\n" $(abspath $(CONFIG_PATH))
 	@printf "\tdefault alternate config path (SYSCONFIG) : %s\n" $(abspath $(SYSCONFIG))
+	@printf "\tdefault hypervisor : %s\n" $(DEFAULT_HYPERVISOR)
 ifneq (,$(findstring $(HYPERVISOR_QEMU),$(KNOWN_HYPERVISORS)))
 	@printf "\t$(HYPERVISOR_QEMU) hypervisor path (QEMUPATH) : %s\n" $(abspath $(QEMUPATH))
 endif

@@ -82,7 +82,14 @@ $ cd kata-containers/src/runtime-rs
 $ make && sudo make install
 ```
 After running the command above, the default config file `configuration.toml` will be installed under `/usr/share/defaults/kata-containers/`,  the binary file `containerd-shim-kata-v2` will be installed under `/usr/local/bin/` .
+### build Kata 3.0 Rust Runtime Shim with out Dragonball VMM
 
+The Runtime-rs is built with build-in VMM Dragonball by default.
+If you want to build the runtime-rs without the Buildin VMM, you need to run `make` with `DRAGONBALL=no` as follows.
+
+```bash
+$ make kata-containers/src/runtime-rs DRAGONBALL=no
+```
 ### Build Kata Containers Kernel
 Follow the [Kernel installation guide](/tools/packaging/kernel/README.md).
 

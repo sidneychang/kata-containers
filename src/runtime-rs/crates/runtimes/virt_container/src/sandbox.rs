@@ -17,7 +17,7 @@ use common::message::{Action, Message};
 use common::{Sandbox, SandboxNetworkEnv};
 use containerd_shim_protos::events::task::TaskOOM;
 use hypervisor::VsockConfig;
-#[cfg(not(target_arch = "s390x"))]
+#[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
 use hypervisor::{dragonball::Dragonball, HYPERVISOR_DRAGONBALL};
 use hypervisor::{qemu::Qemu, HYPERVISOR_QEMU};
 use hypervisor::{utils::get_hvsock_path, HybridVsockConfig, DEFAULT_GUEST_VSOCK_CID};
@@ -588,7 +588,7 @@ impl Persist for VirtSandbox {
         let h = sandbox_state.hypervisor.unwrap_or_default();
         let hypervisor = match h.hypervisor_type.as_str() {
             // TODO support other hypervisors
-            #[cfg(not(target_arch = "s390x"))]
+            #[cfg(all(not(target_arch = "s390x"),feature = "dragonball"))]
             HYPERVISOR_DRAGONBALL => {
                 let hypervisor = Arc::new(Dragonball::restore((), h).await?) as Arc<dyn Hypervisor>;
                 Ok(hypervisor)
