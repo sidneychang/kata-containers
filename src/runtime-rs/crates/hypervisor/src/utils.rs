@@ -10,8 +10,9 @@ use std::{
     os::fd::{AsRawFd, RawFd},
 };
 
-use anyhow::{anyhow, Context, Result};
+// use crate::device::Tap;
 use dbs_utils::net::Tap;
+use anyhow::{anyhow, Context, Result};
 use kata_types::config::KATA_PATH;
 use nix::{
     fcntl,
