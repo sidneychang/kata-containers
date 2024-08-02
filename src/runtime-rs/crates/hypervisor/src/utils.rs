@@ -3,20 +3,17 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-
-use std::{
-    collections::HashSet,
-    fs::{File, OpenOptions},
-    os::fd::{AsRawFd, RawFd},
-};
-
-// use crate::device::Tap;
-use dbs_utils::net::Tap;
+use crate::device::Tap;
 use anyhow::{anyhow, Context, Result};
 use kata_types::config::KATA_PATH;
 use nix::{
     fcntl,
     sched::{setns, CloneFlags},
+};
+use std::{
+    collections::HashSet,
+    fs::{File, OpenOptions},
+    os::fd::{AsRawFd, RawFd},
 };
 
 use crate::{DEFAULT_HYBRID_VSOCK_NAME, JAILER_ROOT};

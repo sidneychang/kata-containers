@@ -19,21 +19,21 @@ use vmm_sys_util::{ioctl_ioc_nr, ioctl_iow_nr};
 // As defined in the Linux UAPI:
 // https://elixir.bootlin.com/linux/v4.17/source/include/uapi/linux/if.h#L33
 pub(crate) const IFACE_NAME_MAX_LEN: usize = 16;
-const IFF_TAP: c_short = 0x0002;
-const IFF_NO_PI: c_short = 0x1000;
-const IFF_VNET_HDR: c_short = 0x0040;
-const IFF_MULTI_QUEUE: c_short = 0x0100;
 
-// const SIOCSIFNETMASK: ::std::os::raw::c_uint = 35100;
+// Constants representing various flags used to configure TUN/TAP devices.
+const IFF_TAP: ::std::os::raw::c_uint = 2;
+const IFF_NO_PI: ::std::os::raw::c_uint = 4096;
+const IFF_VNET_HDR: ::std::os::raw::c_uint = 16384;
+const IFF_MULTI_QUEUE: ::std::os::raw::c_uint = 256;
+
+// Constants representing ioctl request codes for network interface operations.
+const SIOCSIFNETMASK: ::std::os::raw::c_uint = 35100;
 const SIOCSIFFLAGS: ::std::os::raw::c_uint = 35092;
-// const SIOCSIFADDR: ::std::os::raw::c_uint = 35094;
+const SIOCSIFADDR: ::std::os::raw::c_uint = 35094;
 
-// 声明 net_device_flags 类型
-pub type NetDeviceFlags = ::std::os::raw::c_uint;
-
-// 定义常量
-pub const NET_DEVICE_FLAGS_IFF_UP: NetDeviceFlags = 1;
-pub const NET_DEVICE_FLAGS_IFF_RUNNING: NetDeviceFlags = 64;
+// Constants representing network device flags for configuring interface states.
+pub const NET_DEVICE_FLAGS_IFF_UP:::std::os::raw::c_uint = 1;
+pub const NET_DEVICE_FLAGS_IFF_RUNNING:::std::os::raw::c_uint = 64;
 /// List of errors the tap implementation can throw.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -83,7 +83,6 @@ impl PartialEq for Tap {
         self.if_name == other.if_name
     }
 }
-//创建套接字
 fn create_socket() -> Result<UdpSocket> {
     // This is safe since we check the return value.
     let sock = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
@@ -97,22 +96,20 @@ fn create_socket() -> Result<UdpSocket> {
 
 // Returns a byte vector representing the contents of a null terminated C string which
 // contains if_name.
-//转换成以、/0结束的字符串
 pub fn build_terminated_if_name(if_name: &str) -> Result<[i8; IFACE_NAME_MAX_LEN]> {
+    // Convert the string slice to bytes, and shadow the variable,
+    // since we no longer need the &str version.
     let if_name_bytes = if_name.as_bytes();
 
-    // 检查接口名称长度是否超过最大长度
     if if_name_bytes.len() >= IFACE_NAME_MAX_LEN {
         return Err(Error::InvalidIfname);
     }
 
-    // 初始化 i8 数组，并将字节转换并复制到数组中
     let mut terminated_if_name = [0i8; IFACE_NAME_MAX_LEN];
     for (i, &byte) in if_name_bytes.iter().enumerate() {
         terminated_if_name[i] = byte as i8;
     }
 
-    // 确保以 null 终止符结尾
     terminated_if_name[if_name_bytes.len()] = 0; // 0 是 i8 类型的 null 终止符
 
     Ok(terminated_if_name)
@@ -123,21 +120,12 @@ impl Tap {
     /// # Arguments
     ///
     /// * `if_name` - the name of the interface.
-    /// # Example
-    ///
-    /// ```no_run
-    /// use dbs_utils::net::Tap;
-    /// Tap::open_named("doc-test-tap", false).unwrap();
-    /// ```
     pub fn open_named(if_name: &str, multi_vq: bool) -> Result<Tap> {
         let terminated_if_name = build_terminated_if_name(if_name)?;
-
-        // This is pretty messy because of the unions used by ifreq. Since we
-        // don't call as_mut on the same union field more than once, this block
-        // is safe.
-        // let mut ifreq: net_gen::ifreq = Default::default();
+        
+        //Initialize an `ifreq` structure with the given interface name 
+        //and configure its flags for setting up a network interface.
         let mut ifr: ifreq = unsafe { std::mem::zeroed() };
-
         ifr.ifr_name = terminated_if_name;
         ifr.ifr_ifru.ifru_flags =
             (IFF_TAP | IFF_NO_PI | IFF_VNET_HDR | if multi_vq { IFF_MULTI_QUEUE } else { 0 })
@@ -169,8 +157,7 @@ impl Tap {
         if ret < 0 {
             return Err(Error::CreateTap(IoError::last_os_error()));
         }
-
-        // Safe since only the name is accessed, and it's cloned out.
+.
         Ok(Tap {
             tap_file: tuntap,
             if_name: ifr.ifr_name,
@@ -219,7 +206,6 @@ impl Tap {
         let mut ifr = self.get_ifreq();
 
         // We only access one field of the ifru union, hence this is safe.
-
         ifr.ifr_ifru.ifru_flags = (NET_DEVICE_FLAGS_IFF_UP | NET_DEVICE_FLAGS_IFF_RUNNING) as i16;
 
         // ioctl is safe. Called with a valid sock fd, and we check the return.
@@ -247,12 +233,10 @@ impl Tap {
 
         // This sets the name of the interface, which is the only entry
         // in a single-field union.
-
         let ifr_name = ifr.ifr_name.as_mut();
         ifr_name.clone_from_slice(&self.if_name);
-
         ifr.ifr_ifru.ifru_flags = self.if_flags;
-
+    
         ifr
     }
 
@@ -284,186 +268,201 @@ impl AsRawFd for Tap {
     }
 }
 
-// mod tests {
-//     #![allow(dead_code)]
+mod tests {
+    #![allow(dead_code)]
 
-//     use std::mem;
-//     use std::net::Ipv4Addr;
-//     use std::str;
-//     use std::sync::atomic::{AtomicUsize, Ordering};
+    use super::*;
+    use libc::{in_addr, sockaddr, sockaddr_in};
+    use std::mem;
+    use std::net::Ipv4Addr;
+    use std::str;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
-//     use super::*;
+    const SUBNET_MASK: &str = "255.255.255.0";
+    const TAP_IP_PREFIX: &str = "192.168.241.";
+    const FAKE_MAC: &str = "12:34:56:78:9a:bc";
 
-//     const SUBNET_MASK: &str = "255.255.255.0";
-//     const TAP_IP_PREFIX: &str = "192.168.241.";
-//     const FAKE_MAC: &str = "12:34:56:78:9a:bc";
+    // We skip the first 10 bytes because the IFF_VNET_HDR flag is set when the interface
+    // is created, and the legacy header is 10 bytes long without a certain flag which
+    // is not set in Tap::new().
+    const VETH_OFFSET: usize = 10;
+    static NEXT_IP: AtomicUsize = AtomicUsize::new(1);
 
-//     // We skip the first 10 bytes because the IFF_VNET_HDR flag is set when the interface
-//     // is created, and the legacy header is 10 bytes long without a certain flag which
-//     // is not set in Tap::new().
-//     const VETH_OFFSET: usize = 10;
-//     static NEXT_IP: AtomicUsize = AtomicUsize::new(1);
+    // Create a sockaddr_in from an IPv4 address, and expose it as
+    // an opaque sockaddr suitable for usage by socket ioctls.
+    fn create_sockaddr(ip_addr: Ipv4Addr) -> sockaddr {
+        // IPv4 addresses big-endian (network order), but Ipv4Addr will give us
+        // a view of those bytes directly so we can avoid any endian trickiness.
+        let addr_in = sockaddr_in {
+            sin_family: libc::AF_INET as u16,
+            sin_port: 0,
+            sin_addr: in_addr {
+                s_addr: u32::from(ip_addr).to_be(),
+            },
+            sin_zero: [0; 8],
+        };
 
-//     // Create a sockaddr_in from an IPv4 address, and expose it as
-//     // an opaque sockaddr suitable for usage by socket ioctls.
-//     fn create_sockaddr(ip_addr: Ipv4Addr) -> net_gen::sockaddr {
-//         // IPv4 addresses big-endian (network order), but Ipv4Addr will give us
-//         // a view of those bytes directly so we can avoid any endian trickiness.
-//         let addr_in = net_gen::sockaddr_in {
-//             sin_family: net_gen::AF_INET as u16,
-//             sin_port: 0,
-//             sin_addr: unsafe { mem::transmute(ip_addr.octets()) },
-//             __pad: [0; 8usize],
-//         };
+        unsafe { mem::transmute(addr_in) }
+    }
+    impl Tap {
+        // We do not run unit tests in parallel so we should have no problem
+        // assigning the same IP.
 
-//         unsafe { mem::transmute(addr_in) }
-//     }
-//     impl Tap {
-//         // We do not run unit tests in parallel so we should have no problem
-//         // assigning the same IP.
+        /// Create a new tap interface.
+        pub fn new() -> Result<Tap> {
+            // The name of the tap should be {module_name}{index} so that
+            // we make sure it stays different when tests are run concurrently.
+            let next_ip = NEXT_IP.fetch_add(1, Ordering::SeqCst);
+            Self::open_named(&format!("test_tap{next_ip}"), false)
+        }
 
-//         /// Create a new tap interface.
-//         pub fn new() -> Result<Tap> {
-//             // The name of the tap should be {module_name}{index} so that
-//             // we make sure it stays different when tests are run concurrently.
-//             let next_ip = NEXT_IP.fetch_add(1, Ordering::SeqCst);
-//             Self::open_named(&format!("dbs_tap{next_ip}"), false)
-//         }
+        /// Set the host-side IP address for the tap interface.
+        pub fn set_ip_addr(&self, ip_addr: Ipv4Addr) -> Result<()> {
+            let sock = create_socket()?;
+            let addr = create_sockaddr(ip_addr);
 
-//         /// Set the host-side IP address for the tap interface.
-//         pub fn set_ip_addr(&self, ip_addr: Ipv4Addr) -> Result<()> {
-//             let sock = create_socket()?;
-//             let addr = create_sockaddr(ip_addr);
+            let mut ifr: ifreq = self.get_ifreq();
 
-//             let mut ifr: ifreq = self.get_ifreq();
+            // We only access one field of the ifru union, hence this is safe.
 
-//             // We only access one field of the ifru union, hence this is safe.
-//             unsafe {
-//                 let ifru_addr = ifr.ifr_ifru.ifru_addr.as_mut();
-//                 *ifru_addr = addr;
-//             }
+            ifr.ifr_ifru.ifru_addr = addr;
 
-//             // ioctl is safe. Called with a valid sock fd, and we check the return.
-//             let ret = unsafe { ioctl_with_ref(&sock, c_ulong::from(SIOCSIFADDR), &ifr) };
-//             if ret < 0 {
-//                 return Err(Error::IoctlError(IoError::last_os_error()));
-//             }
+            // ioctl is safe. Called with a valid sock fd, and we check the return.
+            let ret = unsafe { ioctl_with_ref(&sock, c_ulong::from(SIOCSIFADDR), &ifr) };
+            if ret < 0 {
+                return Err(Error::IoctlError(IoError::last_os_error()));
+            }
 
-//             Ok(())
-//         }
+            Ok(())
+        }
 
-//         /// Set the netmask for the subnet that the tap interface will exist on.
-//         pub fn set_netmask(&self, netmask: Ipv4Addr) -> Result<()> {
-//             let sock = create_socket()?;
-//             let addr = create_sockaddr(netmask);
+        /// Set the netmask for the subnet that the tap interface will exist on.
+        pub fn set_netmask(&self, netmask: Ipv4Addr) -> Result<()> {
+            let sock = create_socket()?;
+            let addr = create_sockaddr(netmask);
 
-//             let mut ifr: ifreq = self.get_ifreq();
+            let mut ifr: ifreq = self.get_ifreq();
 
-//             // We only access one field of the ifru union, hence this is safe.
-//             unsafe {
-//                 let ifru_addr = ifr.ifr_ifru.ifru_addr;
-//                 *ifru_addr = addr;
-//             }
+            // We only access one field of the ifru union, hence this is safe.
 
-//             // ioctl is safe. Called with a valid sock fd, and we check the return.
-//             let ret = unsafe { ioctl_with_ref(&sock, c_ulong::from(SIOCSIFNETMASK), &ifr) };
-//             if ret < 0 {
-//                 return Err(Error::IoctlError(IoError::last_os_error()));
-//             }
+            ifr.ifr_ifru.ifru_addr = addr;
 
-//             Ok(())
-//         }
-//     }
+            // ioctl is safe. Called with a valid sock fd, and we check the return.
+            let ret = unsafe { ioctl_with_ref(&sock, c_ulong::from(SIOCSIFNETMASK), &ifr) };
+            if ret < 0 {
+                return Err(Error::IoctlError(IoError::last_os_error()));
+            }
 
-//     fn tap_name_to_string(tap: &Tap) -> String {
-//         let null_pos = tap.if_name.iter().position(|x| *x == 0).unwrap();
-//         str::from_utf8(&tap.if_name[..null_pos])
-//             .unwrap()
-//             .to_string()
-//     }
+            Ok(())
+        }
+    }
 
-//     #[test]
-//     fn test_tap_name() {
-//         // Sanity check that the assumed max iface name length is correct.
-//         // assert_eq!(
-//         //     IFACE_NAME_MAX_LEN,
-//         //     net_gen::ifreq__bindgen_ty_1::default()
-//         //         .bindgen_union_field
-//         //         .len()
-//         // );
+    fn tap_name_to_string(tap: &Tap) -> String {
+        // let null_pos = tap.if_name.iter().position(|x| *x == 0).unwrap();
+        // str::from_utf8(&tap.if_name[..null_pos])
+        //     .unwrap()
+        //     .to_string()
+        let null_pos = tap.if_name.iter().position(|x| *x == 0).unwrap();
 
-//         // 16 characters - too long.
-//         let name = "a123456789abcdef";
-//         match Tap::open_named(name, false) {
-//             Err(Error::InvalidIfname) => (),
-//             _ => panic!("Expected Error::InvalidIfname"),
-//         };
+        // 将 &[i8] 转换为 &[u8]
+        let if_name_bytes = &tap.if_name[..null_pos] as *const [i8] as *const [u8];
+        let if_name_u8: &[u8] = unsafe { &*if_name_bytes };
 
-//         // 15 characters - OK.
-//         let name = "a123456789abcde";
-//         let tap = Tap::open_named(name, false).unwrap();
-//         assert_eq!(
-//             name,
-//             std::str::from_utf8(&tap.if_name[0..(IFACE_NAME_MAX_LEN - 1)]).unwrap()
-//         );
-//     }
+        str::from_utf8(if_name_u8).unwrap().to_string()
+    }
 
-//     #[test]
-//     fn test_tap_partial_eq() {
-//         assert_ne!(Tap::new().unwrap(), Tap::new().unwrap());
-//     }
+    #[test]
+    fn test_tap_name() {
+        // Sanity check that the assumed max iface name length is correct.
+        // assert_eq!(
+        //     IFACE_NAME_MAX_LEN,
+        //     net_gen::ifreq__bindgen_ty_1::default()
+        //         .bindgen_union_field
+        //         .len()
+        // );
 
-//     #[test]
-//     fn test_tap_configure() {
-//         // `fetch_add` adds to the current value, returning the previous value.
-//         let next_ip = NEXT_IP.fetch_add(1, Ordering::SeqCst);
+        // 16 characters - too long.
+        let name = "a123456789abcdef";
+        match Tap::open_named(name, false) {
+            Err(Error::InvalidIfname) => (),
+            _ => panic!("Expected Error::InvalidIfname"),
+        };
 
-//         let tap = Tap::new().unwrap();
-//         let ip_addr: Ipv4Addr = format!("{TAP_IP_PREFIX}{next_ip}").parse().unwrap();
-//         let netmask: Ipv4Addr = SUBNET_MASK.parse().unwrap();
+        // 15 characters - OK.
+        let name = "a123456789abcde";
+        let tap = Tap::open_named(name, false).unwrap();
+        let if_name_u8: &[u8] =
+            unsafe { std::slice::from_raw_parts(tap.if_name.as_ptr() as *const u8, name.len()) };
 
-//         let ret = tap.set_ip_addr(ip_addr);
-//         assert!(ret.is_ok());
-//         let ret = tap.set_netmask(netmask);
-//         assert!(ret.is_ok());
-//     }
+        assert_eq!(name, std::str::from_utf8(if_name_u8).unwrap());
+    }
 
-//     #[test]
-//     fn test_set_options() {
-//         // This line will fail to provide an initialized FD if the test is not run as root.
-//         let tap = Tap::new().unwrap();
-//         tap.set_vnet_hdr_size(16).unwrap();
-//         tap.set_offload(0).unwrap();
+    #[test]
+    fn test_tap_partial_eq() {
+        assert_ne!(Tap::new().unwrap(), Tap::new().unwrap());
+    }
 
-//         let faulty_tap = Tap {
-//             tap_file: unsafe { File::from_raw_fd(i32::MAX) },
-//             if_name: [0x01; 16],
-//             if_flags: 0,
-//         };
-//         assert!(faulty_tap.set_vnet_hdr_size(16).is_err());
-//         assert!(faulty_tap.set_offload(0).is_err());
-//     }
+    #[test]
+    fn test_tap_configure() {
+        // `fetch_add` adds to the current value, returning the previous value.
+        let next_ip = NEXT_IP.fetch_add(1, Ordering::SeqCst);
 
-//     #[test]
-//     fn test_tap_enable() {
-//         let tap = Tap::new().unwrap();
-//         let ret = tap.enable();
-//         assert!(ret.is_ok());
-//     }
+        let tap = Tap::new().unwrap();
+        let ip_addr: Ipv4Addr = format!("{TAP_IP_PREFIX}{next_ip}").parse().unwrap();
+        let netmask: Ipv4Addr = SUBNET_MASK.parse().unwrap();
 
-//     #[test]
-//     fn test_tap_get_ifreq() {
-//         let tap = Tap::new().unwrap();
-//         let ret = tap.get_ifreq();
-//         assert_eq!(
-//             "__BindgenUnionField",
-//             format!("{:?}", ret.ifr_ifrn.ifr_name)
-//         );
-//     }
+        let ret = tap.set_ip_addr(ip_addr);
+        assert!(ret.is_ok());
+        let ret = tap.set_netmask(netmask);
+        assert!(ret.is_ok());
+    }
 
-//     #[test]
-//     fn test_raw_fd() {
-//         let tap = Tap::new().unwrap();
-//         assert_eq!(tap.as_raw_fd(), tap.tap_file.as_raw_fd());
-//     }
-// }
+    #[test]
+    fn test_set_options() {
+        // This line will fail to provide an initialized FD if the test is not run as root.
+        let tap = Tap::new().unwrap();
+        tap.set_vnet_hdr_size(16).unwrap();
+        tap.set_offload(0).unwrap();
+
+        let faulty_tap = Tap {
+            tap_file: unsafe { File::from_raw_fd(i32::MAX) },
+            if_name: [0x01; 16],
+            if_flags: 0,
+        };
+        assert!(faulty_tap.set_vnet_hdr_size(16).is_err());
+        assert!(faulty_tap.set_offload(0).is_err());
+    }
+
+    #[test]
+    fn test_tap_enable() {
+        let tap = Tap::new().unwrap();
+        let ret = tap.enable();
+        assert!(ret.is_ok());
+    }
+
+    #[test]
+    fn test_tap_get_ifreq() {
+        let tap = Tap::new().unwrap();
+        let ret = tap.get_ifreq();
+        // assert_eq!("__BindgenUnionField", format!("{:?}", ret.ifr_name));
+        // Convert ifr_name from i8 array to string
+        let ifr_name = unsafe {
+            let name_slice =
+                std::slice::from_raw_parts(ret.ifr_name.as_ptr() as *const u8, libc::IFNAMSIZ);
+            let null_pos = name_slice
+                .iter()
+                .position(|&c| c == 0)
+                .unwrap_or(libc::IFNAMSIZ);
+            std::str::from_utf8(&name_slice[..null_pos]).unwrap_or("")
+        };
+
+        // Compare with the expected name
+        assert_eq!("test_tap6", ifr_name);
+    }
+
+    #[test]
+    fn test_raw_fd() {
+        let tap = Tap::new().unwrap();
+        assert_eq!(tap.as_raw_fd(), tap.tap_file.as_raw_fd());
+    }
+}

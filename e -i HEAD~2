@@ -1,0 +1,59 @@
+[33mcommit 348e494bb32d9425cb3d3df91f682029e04da62a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mcbr-dev[m[33m, [m[1;31morigin/cbr-dev[m[33m)[m
+Author: sidneychang <2190206983@qq.com>
+Date:   Fri Aug 2 20:39:30 2024 +0800
+
+    Port initial Tap functionality from DragonBall to Hypervisor Crate
+
+[33mcommit 2c5788413ef81bbcfc5fc64e69c75ded20a22e21[m[33m ([m[1;31morigin/configurable-build-runtime-rs[m[33m)[m
+Author: sidneychang <2190206983@qq.com>
+Date:   Sat Jul 13 11:37:28 2024 +0800
+
+    Modify configuration files and conditional compilation statements
+
+[33mcommit 81d23a18651d31704beba67c0bc7d58781931f1f[m
+Merge: c4fb6fbda a8432880f
+Author: GabyCT <gabriela.cervantes.tellez@intel.com>
+Date:   Tue Jun 25 17:27:15 2024 -0600
+
+    Merge pull request #9897 from GabyCT/topic/montime
+    
+    tests: Increase timeout to crictl calls on kata monitor tests
+
+[33mcommit a8432880f8ab3d8d8cf691f7a9e90c85ff0ac22f[m
+Author: Gabriela Cervantes <gabriela.cervantes.tellez@intel.com>
+Date:   Mon Jun 24 20:03:45 2024 +0000
+
+    tests: Increase timeout to crictl calls on kata monitor tests
+    
+    This PR increases the timeout to crictl calls on kata monitor
+    tests to avoid to hit issues every now and avoid random failures.
+    This PR is very similar to PR #7640.
+    
+    Signed-off-by: Gabriela Cervantes <gabriela.cervantes.tellez@intel.com>
+
+[33mcommit c4fb6fbda2626af62d174db1dd4c2de1fd8e60ae[m
+Merge: fb44edc22 b08c01900
+Author: Wainer Moschetta <wainersm@redhat.com>
+Date:   Tue Jun 25 15:27:27 2024 -0300
+
+    Merge pull request #9887 from ldoktor/ci-kata-runtime
+    
+    ci.ocp: Ensure we smoke-test with the right runtime class
+
+[33mcommit fb44edc22fe1e8ffa6224601f047e46720c9bc90[m
+Merge: c9df743da 7610b3442
+Author: Fabiano Fidêncio <fabiano.fidencio@intel.com>
+Date:   Tue Jun 25 20:27:13 2024 +0200
+
+    Merge pull request #9906 from stevenhorsman/TEE-sample-kbs-policy-guards
+    
+    tests: attestation: Restrict sample policy use
+
+[33mcommit c9df743dab89c5f012a853493382b3b256db3cf8[m
+Merge: 0582a9c75 d60b548d6
+Author: Steve Horsman <steven@uk.ibm.com>
+Date:   Tue Jun 25 19:11:30 2024 +0100
+
+    Merge pull request #9898 from sprt/gha-cleanup-job
+    
+    ci: Add scheduled job to cleanup resources, pt. I
